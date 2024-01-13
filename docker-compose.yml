@@ -1,0 +1,66 @@
+version: "3.1"
+services:
+  projectname-db:
+    build:
+      context: ./dockerFiles
+      dockerfile: database
+    container_name: "projectnamedb" 
+    restart: unless-stopped
+    ports: 
+      - "hostdbport:3306"
+    env_file: .env
+    environment:
+        - MYSQL_DATABASE=exampledb
+    volumes:
+        - projectnamedbdata:/var/lib/mysql
+        - ./dbconfig:/etc/mysql/conf.d 
+    command: '--default-authentication-plugin=mysql_native_password'
+    networks:
+        - projectname-network 
+  projectname-wordpress:
+    build:
+      context: ./dockerFiles
+      dockerfile: wordpress
+    container_name: projectnamewordpress
+    restart: unless-stopped
+    depends_on:
+      - projectname-db
+      - projectname-cache
+    env_file: .env
+    environment:
+      - WORDPRESS_DB_HOST=projectnamedb:3306
+      - WORDPRESS_DB_USER=$MYSQL_USER
+      - WORDPRESS_DB_PASSWORD=$MYSQL_PASSWORD
+      - WORDPRESS_DB_NAME=exampledb
+      - WP_CLI_ALLOW_ROOT=true
+      - WORDPRESS_CONFIG_EXTRA=
+          define('WP_REDIS_HOST', 'projectnamecache' );
+          define('WP_REDIS_PORT', 6379);
+          define('WP_REDIS_PASSWORD', 'yourredispassword');
+          define('WP_MEMORY_LIMIT', '5120M');
+          define('DISABLE_WP_CRON', true);
+    volumes:
+      - projectnamewww:/var/www/html
+    networks:
+      - projectname-network
+      - nginxnetwork
+  projectname-cache:
+    image: redis:7.0.0-alpine
+    container_name: projectnamecache
+    ports:
+      - redisport:6379    
+    restart: unless-stopped 
+    command: redis-server --requirepass yourredispassword
+    networks:
+      - projectname-network   
+       
+                
+volumes:
+  projectnamewww:
+  projectnamedbdata:
+  
+networks:
+  nginxnetwork:
+    external: true
+  projectname-network:
+    driver: bridge
