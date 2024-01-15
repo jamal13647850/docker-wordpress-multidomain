@@ -20,7 +20,7 @@ sed -i "s/allowip2/$allowip2/g" ./nginx/helpers/wordpress.conf
 
 echo "User for filemanager basic auth:(eg developer)"
 read authuser
-sudo dnf install -y httpd-tools
+sudo apt install -y httpd-tools
 sudo htpasswd -c ./nginx/helpers/.htpasswd $authuser
 
 echo "Set the domain for this project"
@@ -41,9 +41,11 @@ for filename in `find . -name '*.conf' -o -name '*.yml'`; do
 done
 
 
-echo "Projext name:"
+echo "Project name:"
 read projectname
-sed -i "s/projectname/$projectname/g" ./docker-compose.yml
+for filename in `find . -name '*.conf' -o -name '*.yml'`; do
+  sed -i "s/projectname/$projectname/g" $filename
+done
 
 chmod 775 ./docker-compose.yml
 chmod 775 ./.env
@@ -93,17 +95,11 @@ read redisport
 sed -i "s/redisport/$redisport/g" ./docker-compose.yml
 
 
-cp -v ./nginxTemplate/firstRun.conf ./nginx/nginx.conf
+
 docker compose up -d
 
 sleep 60
-docker logs certbot
 
-sleep 60
-rm -rfv ./nginx/nginx.conf
-cp -v ./nginxTemplate/afterFirstRun.conf ./nginx/nginx.conf
-docker restart webserver
-sleep 20
 docker ps -a
 
 
